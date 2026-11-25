@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { DatabaseSync } from 'node:sqlite';
+const ids=JSON.parse(readFileSync(new URL('../data/video-ids.json', import.meta.url),'utf8'));
+test('playlist contains 98 valid entries and 97 unique video IDs',()=>{assert.equal(ids.length,98);assert.equal(new Set(ids).size,97);assert.equal(ids.filter(id=>id==='j_iwGC-dSug').length,2);assert.ok(ids.every(id=>/^[\w-]{11}$/.test(id)));});
+test('seed is idempotent and stores the unique IDs',()=>{const dir=mkdtempSync(join(tmpdir(),'academy-'));const path=join(dir,'test.db');try{for(let i=0;i<2;i++)execFileSync(process.execPath,['scripts/seed.mjs'],{env:{...process.env,DATABASE_URL:`file:${path}`}});const db=new DatabaseSync(path);assert.equal(db.prepare('SELECT COUNT(*) as n FROM videos').get().n,97);db.close();}finally{rmSync(dir,{recursive:true,force:true});}});
